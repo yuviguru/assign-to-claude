@@ -1,0 +1,53 @@
+{
+  "name": "assign-to-claude",
+  "version": "0.1.0",
+  "description": "Connect any PM tool to Claude Code. Assign a ticket, get a PR.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "linear",
+    "jira",
+    "asana",
+    "clickup",
+    "github-actions",
+    "automation",
+    "ai",
+    "developer-tools"
+  ],
+  "homepage": "https://github.com/yuviguru/assign-to-claude",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuviguru/assign-to-claude.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "assign-to-claude": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint 'src/**/*.ts'",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "inquirer": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.0",
+    "@types/node": "^20.19.37",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
