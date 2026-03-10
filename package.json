@@ -1,6 +1,6 @@
 {
   "name": "assign-to-claude",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Connect any PM tool to Claude Code. Assign a ticket, get a PR.",
   "keywords": [
     "claude",
