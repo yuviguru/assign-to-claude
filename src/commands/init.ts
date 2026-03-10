@@ -7,7 +7,8 @@ import { PLATFORM_CHOICES, getPlatform } from "../platforms/index.js";
 import { generateFiles } from "../templates/generate.js";
 import type { PipelineConfig, PMTool, HostingPlatform } from "../types.js";
 
-export async function runInit(): Promise<void> {
+export async function runInit(options: { force?: boolean } = {}): Promise<void> {
+  const { force = false } = options;
   // Block in CI environments
   guardCI();
 
@@ -118,15 +119,40 @@ export async function runInit(): Promise<void> {
   // ─── Step 7: Generate files ───────────────────────────────────────────────
 
   console.log();
-  const { files } = generateFiles({ config, cwd });
+  const { files } = generateFiles({ config, cwd, force });
+
+  const skippedFiles = files.filter((f) => f.skipped);
+  const hasSkipped = skippedFiles.length > 0;
 
   for (const f of files) {
     if (!f.path) continue;
     if (f.skipped) {
       console.log(`  ${chalk.yellow("⚠")}  ${chalk.dim(f.path)} (already exists — skipped)`);
+    } else if (f.overwritten) {
+      console.log(`  ${chalk.yellow("↻")}  ${f.path} ${chalk.dim("(overwritten)")}`);
     } else {
       console.log(`  ${chalk.green("✓")}  ${f.path}`);
     }
+  }
+
+  // If files were skipped (existing setup detected without --force), warn the user
+  if (hasSkipped) {
+    console.log();
+    console.log(chalk.yellow("  Pipeline files already exist in this project."));
+    console.log(chalk.dim("  Existing files were skipped to protect your changes."));
+    console.log();
+    console.log(`  To regenerate all files, run:`);
+    console.log(`    ${chalk.cyan("npx assign-to-claude init --force")}`);
+    console.log();
+    console.log(chalk.dim("  Warning: --force will overwrite existing files."));
+    console.log(chalk.dim("  Any manual changes you made to those files will be lost."));
+    console.log();
+    console.log(chalk.dim("  Or delete specific files and re-run init:"));
+    for (const f of skippedFiles) {
+      console.log(chalk.dim(`    rm ${f.path}`));
+    }
+    console.log();
+    return;
   }
 
   // ─── Step 8: Print manual steps ───────────────────────────────────────────

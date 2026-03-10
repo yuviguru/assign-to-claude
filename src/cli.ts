@@ -3,7 +3,7 @@
 import chalk from "chalk";
 import { runInit } from "./commands/init.js";
 
-const VERSION = "0.1.2";
+const VERSION = "0.1.3";
 
 const args = process.argv.slice(2);
 const command = args[0];
@@ -20,7 +20,8 @@ async function main(): Promise<void> {
   }
 
   if (command === "init") {
-    await runInit();
+    const force = args.includes("--force") || args.includes("-f");
+    await runInit({ force });
     return;
   }
 
@@ -37,9 +38,10 @@ function printHelp(): void {
   console.log();
   console.log(chalk.bold("  Usage"));
   console.log();
-  console.log(`    ${chalk.cyan("assign-to-claude init")}        Set up pipeline in current project`);
-  console.log(`    ${chalk.cyan("assign-to-claude --version")}   Show version`);
-  console.log(`    ${chalk.cyan("assign-to-claude --help")}      Show this help`);
+  console.log(`    ${chalk.cyan("assign-to-claude init")}           Set up pipeline in current project`);
+  console.log(`    ${chalk.cyan("assign-to-claude init --force")}  Regenerate all files (overwrites existing)`);
+  console.log(`    ${chalk.cyan("assign-to-claude --version")}     Show version`);
+  console.log(`    ${chalk.cyan("assign-to-claude --help")}        Show this help`);
   console.log();
   console.log(chalk.bold("  Supported PM tools"));
   console.log();

@@ -189,6 +189,70 @@ console.log("\n── Skip existing files ────────────�
   cleanup(dir);
 }
 
+// ─── Test: force overwrite ────────────────────────────────────────────────────
+
+console.log("\n── Force overwrite ─────────────────────────────");
+{
+  const dir = makeTestDir("force");
+  mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+  writeFileSync(join(dir, ".github/workflows/claude-pipeline.yml"), "# old content\n");
+
+  const config = {
+    pmTool: "linear",
+    platform: "netlify",
+    githubRepo: "owner/repo",
+    triggerEmail: "test@test.com",
+    siteName: "test-site",
+  };
+
+  // Without force — files should be skipped
+  const { files: filesNoForce } = generateFiles({ config, cwd: dir });
+  const skippedFile = filesNoForce.find(f => f.path === ".github/workflows/claude-pipeline.yml");
+  assert(skippedFile?.skipped === true, "Without --force: skips existing file");
+  assert(readFileSync(join(dir, ".github/workflows/claude-pipeline.yml"), "utf8") === "# old content\n",
+    "Without --force: content unchanged");
+
+  // With force — files should be overwritten
+  const { files: filesForce } = generateFiles({ config, cwd: dir, force: true });
+  const overwritten = filesForce.find(f => f.path === ".github/workflows/claude-pipeline.yml");
+  assert(overwritten?.skipped !== true, "With --force: file is not skipped");
+  assert(overwritten?.overwritten === true, "With --force: file marked as overwritten");
+
+  const newContent = readFileSync(join(dir, ".github/workflows/claude-pipeline.yml"), "utf8");
+  assert(newContent !== "# old content\n", "With --force: content was replaced");
+  assert(newContent.includes("claude-code-action"), "With --force: new content has workflow");
+
+  cleanup(dir);
+}
+
+{
+  const dir = makeTestDir("force-all");
+  mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+  mkdirSync(join(dir, "netlify/functions"), { recursive: true });
+  writeFileSync(join(dir, ".github/workflows/claude-pipeline.yml"), "# old\n");
+  writeFileSync(join(dir, ".github/workflows/claude-pr-review.yml"), "# old\n");
+  writeFileSync(join(dir, "netlify/functions/webhook.ts"), "// old\n");
+  writeFileSync(join(dir, "netlify.toml"), "# old\n");
+  writeFileSync(join(dir, ".env.example"), "# old\n");
+
+  const config = {
+    pmTool: "linear",
+    platform: "netlify",
+    githubRepo: "owner/repo",
+    triggerEmail: "test@test.com",
+    siteName: "test-site",
+  };
+
+  const { files } = generateFiles({ config, cwd: dir, force: true });
+  const allOverwritten = files.filter(f => f.overwritten);
+  assert(allOverwritten.length === 5, `With --force: all 5 files overwritten (got ${allOverwritten.length})`);
+
+  const noneSkipped = files.filter(f => f.skipped);
+  assert(noneSkipped.length === 0, "With --force: no files skipped");
+
+  cleanup(dir);
+}
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n${"─".repeat(50)}`);

@@ -7,18 +7,24 @@ import { getPlatform } from "../platforms/index.js";
 interface GenerateOptions {
   config: PipelineConfig & Record<string, string>;
   cwd?: string;
+  force?: boolean;
 }
 
 interface GeneratedOutput {
-  files: Array<{ path: string; skipped?: boolean }>;
+  files: Array<{ path: string; skipped?: boolean; overwritten?: boolean }>;
 }
 
-function write(filePath: string, content: string, cwd: string): { skipped: boolean } {
+function write(filePath: string, content: string, cwd: string, force: boolean): { skipped: boolean; overwritten: boolean } {
   const abs = join(cwd, filePath);
-  if (existsSync(abs)) return { skipped: true };
+  if (existsSync(abs)) {
+    if (!force) return { skipped: true, overwritten: false };
+    // Force mode — overwrite the file
+    writeFileSync(abs, content, "utf8");
+    return { skipped: false, overwritten: true };
+  }
   mkdirSync(dirname(abs), { recursive: true });
   writeFileSync(abs, content, "utf8");
-  return { skipped: false };
+  return { skipped: false, overwritten: false };
 }
 
 // ─── GitHub Actions workflow ─────────────────────────────────────────────────
@@ -228,12 +234,12 @@ const EVENT_TYPE: Record<PMTool, string> = {
 };
 
 export function generateFiles(options: GenerateOptions): GeneratedOutput {
-  const { config, cwd = process.cwd() } = options;
+  const { config, cwd = process.cwd(), force = false } = options;
   const adapter = getAdapter(config.pmTool);
-  const results: Array<{ path: string; skipped?: boolean }> = [];
+  const results: Array<{ path: string; skipped?: boolean; overwritten?: boolean }> = [];
 
-  const record = (path: string, skipped: boolean) =>
-    results.push({ path, skipped: skipped || undefined });
+  const record = (path: string, r: { skipped: boolean; overwritten: boolean }) =>
+    results.push({ path, skipped: r.skipped || undefined, overwritten: r.overwritten || undefined });
 
   // 1. Webhook handler (skip for GitHub Issues)
   if (config.pmTool !== "github_issues") {
@@ -243,28 +249,26 @@ export function generateFiles(options: GenerateOptions): GeneratedOutput {
     // Wrap the core handler in a platform-specific entry point
     const platformWrapper = generatePlatformWrapper(config.pmTool, config.platform, handler.content);
     const handlerPath = platform.webhookPath;
-    const r = write(handlerPath, platformWrapper, cwd);
-    record(handlerPath, r.skipped);
+    record(handlerPath, write(handlerPath, platformWrapper, cwd, force));
 
     // Platform config file (netlify.toml / vercel.json / wrangler.toml)
     const platformConfig = platform.generateConfig();
-    const r2 = write(platformConfig.path, platformConfig.content, cwd);
-    record(platformConfig.path, r2.skipped);
+    record(platformConfig.path, write(platformConfig.path, platformConfig.content, cwd, force));
   }
 
   // 2. GitHub Actions — main workflow
   const mainWorkflow = generateMainWorkflow(config.pmTool, EVENT_TYPE[config.pmTool]);
   const mainPath = ".github/workflows/claude-pipeline.yml";
-  record(mainPath, write(mainPath, mainWorkflow, cwd).skipped);
+  record(mainPath, write(mainPath, mainWorkflow, cwd, force));
 
   // 3. GitHub Actions — PR review workflow
   const reviewWorkflow = generatePRReviewWorkflow();
   const reviewPath = ".github/workflows/claude-pr-review.yml";
-  record(reviewPath, write(reviewPath, reviewWorkflow, cwd).skipped);
+  record(reviewPath, write(reviewPath, reviewWorkflow, cwd, force));
 
   // 4. .env.example
   const envExample = generateEnvExample(config, adapter.envVars);
-  record(".env.example", write(".env.example", envExample, cwd).skipped);
+  record(".env.example", write(".env.example", envExample, cwd, force));
 
   return { files: results };
 }
