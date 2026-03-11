@@ -312,7 +312,8 @@ console.log("\n\u2550\u2550 CLI Entry Point \u2550\u2550\u2550\u2550\u2550\u2550
   // Test --version
   try {
     const version = execSync("node dist/cli.js --version", { cwd: process.cwd() }).toString().trim();
-    assert(version === "0.1.0", `CLI --version returns 0.1.0 (got: ${version})`);
+    const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+    assert(version === pkg.version, `CLI --version returns ${pkg.version} (got: ${version})`);
   } catch (e) {
     assert(false, `CLI --version runs without error: ${e.message}`);
   }
