@@ -367,6 +367,28 @@ No runtime dependency on this package — the generated files work independently
 
 ---
 
+## Upgrading
+
+This package is a **code generator** — it creates files in your repo and has no runtime dependency. When you run `npx assign-to-claude init`, npx always fetches the latest version.
+
+If we release improvements to the generated workflow files or webhook handlers, your existing files won't update automatically. To get the latest generated files:
+
+```bash
+# Regenerate all files (overwrites existing ones)
+npx assign-to-claude init --force
+```
+
+> **Warning:** `--force` will overwrite your existing generated files. Any manual changes you made to those files will be lost.
+
+If you only want to update specific files, delete them first and re-run `init` without `--force`:
+
+```bash
+rm .github/workflows/claude-pipeline.yml
+npx assign-to-claude init
+```
+
+---
+
 ## Troubleshooting
 
 ### Webhook not firing
